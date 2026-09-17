@@ -1,0 +1,4 @@
+node_modules
+.next
+package-lock.json
+docs/Eve_V1_Product_and_Technical_Spec.md

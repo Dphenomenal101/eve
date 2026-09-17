@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.pnpm-store/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.DS_Store
+.vercel/
+.data/
+# Original supplied product brief remains a local reference.
+docs/Eve_V1_Product_and_Technical_Spec.md
