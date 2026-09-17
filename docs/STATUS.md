@@ -1,6 +1,6 @@
 # Implementation and verification status
 
-The credential-free application and local Git repository are available. GitHub publication is intentionally deferred by the owner. No customer provider credentials, cloud project, or production deployment were configured during this build.
+The credential-free application is available in the public repository at [Dphenomenal101/eve](https://github.com/Dphenomenal101/eve). No customer provider credentials, cloud project, or production deployment were configured during this build.
 
 ## Verified locally
 

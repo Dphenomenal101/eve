@@ -1,5 +1,7 @@
 # Eve
 
+[Public repository](https://github.com/Dphenomenal101/eve)
+
 A revenue teammate for developer-first products. Eve turns confirmed product signals into useful, reviewable actions: an implementation page, a helpful email, an opted-in call, or a CRM update. When a prospect replies or activates, obsolete follow-ups stop.
 
 Built with Next.js, React, TypeScript, Convex, Better Auth, Base UI, JSON Render, and the AI SDK. MIT licensed; self-hostable with your own accounts.
