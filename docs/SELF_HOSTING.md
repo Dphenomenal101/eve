@@ -15,11 +15,11 @@ Set these Next.js environment variables to the deployment URLs shown by Convex:
 
 Public environment values are embedded at build time. Restart/rebuild Next.js after changing them. Convex's `CONVEX_SITE_URL` is provided by the deployment itself.
 
-The committed `_generated` files are bootstrap references for credential-free builds. Allow `convex dev` to regenerate them; commit the resulting generated types for your deployment. The local auth schema adds organization, member, invitation, and active-organization fields to the upstream base schema.
+The committed `_generated` files are emitted by the Convex CLI. Allow `convex dev` to regenerate them when connecting your project or changing the backend schema; commit the resulting generated types. The local auth schema adds organization, member, invitation, and active-organization fields to the upstream base schema.
 
 ## 2. Deployment-owned secrets
 
-Set the following in the **Convex dashboard → Settings → Environment Variables**, not in browser-visible variables. Do not commit keys. You can also use `npx convex env set` from your local terminal.
+Set the following in the **Convex dashboard → Settings → Environment Variables**, not in browser-visible variables. Adding them to Next.js `.env.local` does not synchronize them to Convex. Do not commit keys. You can also use `npx convex env set` from your local terminal.
 
 | Variable                                   | Purpose                                                                                          |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
@@ -31,6 +31,7 @@ Set the following in the **Convex dashboard → Settings → Environment Variabl
 | `AUTH_EMAIL_FROM`                          | A sender on your verified Resend domain                                                          |
 | `COMPOSIO_API_KEY`                         | Your deployment's Composio infrastructure account                                                |
 | `COMPOSIO_HUBSPOT_AUTH_CONFIG_ID`          | Your HubSpot auth configuration in Composio                                                      |
+| `CONTEXT_DEV_API_KEY`                      | Deployment-owned Context.dev key for website research and company enrichment                     |
 | `AI_GATEWAY_API_KEY`                       | Your Vercel AI Gateway credential                                                                |
 | `EVE_MODEL`                                | A structured-output-capable model identifier available to that Gateway account                   |
 
@@ -94,7 +95,11 @@ V1 matches companies by domain and contacts by email. The first pipeline and its
 
 ### Context.dev
 
-Enter your own key. Eve verifies the business website, researches descriptions, and enriches prospect company name, industry, and available employee count. Research is cached per account for 24 hours and retains provenance. Failure preserves prior evidence and surfaces a connection warning.
+Set `CONTEXT_DEV_API_KEY` in the Convex deployment's environment variables. A value in Next.js `.env.local` alone is not available to the Convex backend. In **Connections → Context.dev**, choose **Deployment account** and verify it after saving your business website in Playbook. The key stays in server environment settings; only connection metadata is stored for the workspace. Usage is billed to the deployer's Context.dev account.
+
+Optionally choose **My workspace account** to verify and save an encrypted workspace-owned key instead. That key overrides the deployment account only for this workspace. Switching back to the deployment account removes the saved override. Disconnecting stops research for the workspace; missing or invalid workspace keys never silently fall back to deployment billing. This self-hosted setup does not implement a capped hosted allowance.
+
+Eve verifies the business website, researches descriptions, and enriches prospect company name, industry, and available employee count. Research is cached per account for 24 hours and retains provenance. Failure preserves prior evidence and surfaces a connection warning.
 
 ### Retell (optional)
 
@@ -115,5 +120,7 @@ Run **Rehearsal** in your live workspace. The synthetic prospect is permanently 
 Start in **Copilot**. Confirm the brief and signals, connect providers, then activate Eve. Inspect the first signup, enrichment, confirmed friction event, page, email, reply/activation, and CRM update. Use global pause while diagnosing any mismatch. Observe creates drafts; Autopilot still enforces all eligibility, suppression, timing, and content gates.
 
 For production, deploy the Convex backend with `npm run convex:deploy`, configure the production environment variables, then build and host Next.js on a Node-capable host with `npm run build` and `npm start`. Set `SITE_URL` to the final HTTPS origin **before creating production workspaces**, because their public page base is stored at creation. Reconfigure callbacks and signed webhook URLs for production. No automatic cloud deployment occurs in this repository.
+
+In a restricted environment where Turbopack cannot bind its local worker port, use the supported alternative `npm run build -- --webpack`.
 
 Official references: [Convex + Better Auth](https://labs.convex.dev/better-auth/framework-guides/next), [local auth schema](https://labs.convex.dev/better-auth/features/local-install), [AgentMail](https://docs.agentmail.to/api-reference/inboxes/messages/send), [Composio](https://docs.composio.dev/), [HubSpot CRM](https://developers.hubspot.com/docs/api-reference/legacy/crm/search-the-crm), [Retell](https://docs.retellai.com/), [JSON Render](https://json-render.dev/docs/quick-start).

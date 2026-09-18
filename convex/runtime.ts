@@ -67,6 +67,7 @@ export const tick = internalAction({
             throw new Error("CRM connection is unavailable.");
           providerId = await writeCrm(latest, action, connection, guard);
         } else {
+          if (!provider) throw new Error("Action provider is unavailable.");
           const credential = await ctx.runQuery(internal.workspace.credential, {
             workspaceId,
             provider,
@@ -77,7 +78,7 @@ export const tick = internalAction({
             decryptCredential(
               credential.ciphertext,
               workspaceId,
-              provider!,
+              provider,
               process.env.EVE_ENCRYPTION_KEY ?? "",
             ),
           ) as { key: string };

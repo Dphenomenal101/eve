@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { tables } from "./base-schema";
+import { tables } from "./baseSchema";
 export default defineSchema({
   ...tables,
   session: defineTable({

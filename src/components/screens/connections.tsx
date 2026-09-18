@@ -40,6 +40,7 @@ export function Connections() {
     [disconnect, setDisconnect] = useState<Connection | null>(null),
     [promptOpen, setPromptOpen] = useState(false),
     [ingestKey, setIngestKey] = useState("");
+  const [contextSource, setContextSource] = useState("deployment");
   const readOnly = !["owner", "admin"].includes(role);
   const ingestUrl = `${process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? "https://YOUR_DEPLOYMENT.convex.site"}/events`;
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -203,6 +204,11 @@ export function Connections() {
                   onClick={() => {
                     setSelected(c);
                     setIngestKey("");
+                    setContextSource(
+                      c.scope === "workspace" && c.status !== "disconnected"
+                        ? "workspace"
+                        : "deployment",
+                    );
                   }}
                 >
                   {c.status === "healthy" ? (
@@ -353,6 +359,48 @@ export function Connections() {
                   <div className="modal-actions">
                     <Button type="submit" variant="primary" loading={busy}>
                       Verify deployment model
+                    </Button>
+                  </div>
+                </>
+              ) : selected.provider === "context" ? (
+                <>
+                  <Field label="Context.dev account">
+                    <select
+                      className="input"
+                      value={contextSource}
+                      onChange={(e) => setContextSource(e.target.value)}
+                    >
+                      <option value="deployment">Deployment account</option>
+                      <option value="workspace">My workspace account</option>
+                    </select>
+                  </Field>
+                  {contextSource === "deployment" ? (
+                    <p className="muted">
+                      Use the account supplied by the deployment owner. Set
+                      CONTEXT_DEV_API_KEY in Convex, then verify access using
+                      the business website saved in Playbook. Research is billed
+                      to that deployment account.
+                    </p>
+                  ) : (
+                    <Field
+                      label="Workspace Context.dev API key"
+                      hint="Overrides the deployment account for this workspace. Research is billed to your account."
+                    >
+                      <Input
+                        name="secret"
+                        type="password"
+                        required
+                        autoComplete="off"
+                        placeholder="Paste your Context.dev key"
+                      />
+                    </Field>
+                  )}
+                  <div className="modal-actions">
+                    <Button onClick={() => setSelected(null)}>Cancel</Button>
+                    <Button type="submit" variant="primary" loading={busy}>
+                      {contextSource === "deployment"
+                        ? "Verify deployment Context.dev"
+                        : "Verify & save workspace key"}
                     </Button>
                   </div>
                 </>

@@ -186,13 +186,29 @@ export const setConnection = internalMutation({
     const previousConnection = state.connections[idx];
     const authorizationChanged =
       !!args.ciphertext ||
+      previousConnection.scope !== args.connection.scope ||
       previousConnection.providerAccountId !==
         args.connection.providerAccountId ||
       previousConnection.resourceId !== args.connection.resourceId ||
       JSON.stringify(previousConnection.mapping) !==
         JSON.stringify(args.connection.mapping);
     state.connections[idx] = args.connection;
-    if (args.ciphertext) {
+    if (
+      args.connection.provider === "context" &&
+      args.connection.scope === "deployment"
+    ) {
+      if (args.ciphertext)
+        throw new DomainError(
+          "Deployment credentials must remain in server environment settings.",
+        );
+      const existing = await ctx.db
+        .query("credentials")
+        .withIndex("by_workspace_provider", (q) =>
+          q.eq("workspaceId", args.workspaceId).eq("provider", "context"),
+        )
+        .unique();
+      if (existing) await ctx.db.delete(existing._id);
+    } else if (args.ciphertext) {
       const existing = await ctx.db
         .query("credentials")
         .withIndex("by_workspace_provider", (q) =>

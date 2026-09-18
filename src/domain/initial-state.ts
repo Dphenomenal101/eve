@@ -128,7 +128,9 @@ export function createWorkspace(
       provider: c.provider as Dataset["connections"][number]["provider"],
       status: "disconnected",
       owner: user.name,
-      scope: c.provider === "model" ? "deployment" : "workspace",
+      scope: ["model", "context"].includes(c.provider)
+        ? "deployment"
+        : "workspace",
     })),
     policies: [
       {

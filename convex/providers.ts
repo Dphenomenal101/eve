@@ -34,6 +34,18 @@ async function stateFor(ctx: ActionCtx, workspaceId: string): Promise<Dataset> {
   return ctx.runQuery(internal.workspace.internalState, { workspaceId });
 }
 async function keyFor(ctx: ActionCtx, workspaceId: string, provider: string) {
+  if (provider === "context") {
+    const state = await stateFor(ctx, workspaceId);
+    const connection = state.connections.find((c) => c.provider === "context");
+    if (connection?.status !== "healthy")
+      throw new Error("Connect Context.dev before researching a website.");
+    if (connection.scope === "deployment") {
+      const key = process.env.CONTEXT_DEV_API_KEY;
+      if (!key)
+        throw new Error("Set CONTEXT_DEV_API_KEY on the Convex deployment.");
+      return { key, resourceId: connection.resourceId ?? "" };
+    }
+  }
   const credential = await ctx.runQuery(internal.workspace.credential, {
     workspaceId,
     provider,
@@ -138,6 +150,64 @@ export const connect = action({
       });
       return { connected: true };
     }
+    if (a.provider === "context") {
+      const scope = a.secret ? "workspace" : "deployment";
+      const key = a.secret || process.env.CONTEXT_DEV_API_KEY;
+      if (!key)
+        throw new Error(
+          "Set CONTEXT_DEV_API_KEY on the Convex deployment, or connect a workspace key.",
+        );
+      if (key.length > 8192)
+        throw new Error("Provide a valid Context.dev key.");
+      const website = publicWebsite(s.businessProfiles[0].website);
+      const client = new ContextDev({
+        apiKey: key,
+        maxRetries: 0,
+        timeout: 30000,
+      });
+      let providerAccountId: string;
+      try {
+        const result = await client.brand.retrieve({
+          type: "by_domain",
+          domain: website.hostname,
+        });
+        if (result.status !== "ok") throw new Error("Verification failed.");
+        providerAccountId = result.request_id;
+      } catch {
+        throw new Error(
+          "Context.dev could not verify the key and business website.",
+        );
+      }
+      const {
+        lastError: _lastError,
+        fingerprint: _fingerprint,
+        ...cleanBase
+      } = base;
+      await ctx.runMutation(internal.workspace.setConnection, {
+        workspaceId: a.workspaceId,
+        connection: {
+          ...cleanBase,
+          scope,
+          owner: scope === "deployment" ? "Deployment owner" : user.name,
+          status: "healthy",
+          resourceId: website.hostname,
+          providerAccountId,
+          fingerprint: fingerprint(key),
+        },
+        ...(scope === "workspace"
+          ? {
+              ciphertext: encryptCredential(
+                JSON.stringify({ key }),
+                a.workspaceId,
+                "context",
+                process.env.EVE_ENCRYPTION_KEY ?? "",
+              ),
+              fingerprint: fingerprint(key),
+            }
+          : {}),
+      });
+      return { connected: true };
+    }
     if (!a.secret || a.secret.length > 8192)
       throw new Error("Provide a valid provider key.");
     let providerAccountId = "";
@@ -167,20 +237,6 @@ export const connect = action({
       await client.agent.retrieve(agentId);
       await client.phoneNumber.retrieve(number);
       providerAccountId = agentId;
-    } else if (a.provider === "context") {
-      const url = publicWebsite(s.businessProfiles[0].website);
-      const client = new ContextDev({
-        apiKey: a.secret,
-        maxRetries: 0,
-        timeout: 30000,
-      });
-      const result = await client.brand.retrieve({
-        type: "by_domain",
-        domain: url.hostname,
-      });
-      if (result.status !== "ok")
-        throw new Error("Context.dev could not verify the request.");
-      providerAccountId = result.request_id;
     } else throw new Error("Provider is not supported.");
     const encrypted = encryptCredential(
       JSON.stringify({
@@ -469,7 +525,10 @@ export const receiveWebhook = internalAction({
     body: v.string(),
     headers: v.record(v.string(), v.string()),
   },
-  handler: async (ctx, a) => {
+  handler: async (
+    ctx,
+    a,
+  ): Promise<{ ignored: true } | { duplicate: boolean }> => {
     const s = await stateFor(ctx, a.workspaceId);
     if (
       !["agentmail", "retell"].includes(a.provider) ||
